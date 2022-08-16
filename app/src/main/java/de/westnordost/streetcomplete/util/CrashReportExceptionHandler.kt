@@ -64,7 +64,7 @@ class CrashReportExceptionHandler(
 
         AlertDialog.Builder(activityCtx)
             .setTitle(titleResourceId)
-            .setMessage(R.string.crash_message)
+            .setMessage(appCtx.getString(R.string.crash_message) + "\n" + error)
             .setPositiveButton(R.string.crash_compose_email) { _, _ ->
                 activityCtx.sendEmail(mailReportTo, "Error Report", report)
             }
