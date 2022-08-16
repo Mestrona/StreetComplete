@@ -7,7 +7,6 @@ import de.westnordost.streetcomplete.data.osm.mapdata.BoundingBox
 import de.westnordost.streetcomplete.data.Database
 import de.westnordost.streetcomplete.data.osm.mapdata.ElementKey
 import de.westnordost.streetcomplete.data.osm.mapdata.ElementType
-import de.westnordost.streetcomplete.data.quest.OsmQuestKey
 import de.westnordost.streetcomplete.data.quest.QuestKey
 import de.westnordost.streetcomplete.quests.osmose.OsmoseTable.Columns.ELEMENT_ID
 import de.westnordost.streetcomplete.quests.osmose.OsmoseTable.Columns.ELEMENT_TYPE
@@ -55,7 +54,16 @@ class OsmoseDao(
             //  and the element string needs to be split by '_'
             // currently both are not parsed and thus skipped
             // multiple elements: use the first, and the others only for highlighting geometry
-            val blockedItems = sharedPrefs.getString(questPrefix(sharedPrefs) + PREF_OSMOSE_ITEMS, "")!!.split(',')
+
+            var itemPref = sharedPrefs.getString(questPrefix(sharedPrefs) + PREF_OSMOSE_ITEMS, "")!!;
+            var isPositiveList = false;
+            if (itemPref.substring(0,1).uppercase().equals("S")) {
+                itemPref = itemPref.substring(1)
+                Log.i(TAG, "positive item filter list is configured (S prefix)")
+                isPositiveList = true;
+            }
+
+            val blockedItemsOrAllowedItems = itemPref.split(',')
             db.replaceMany(NAME,
                 arrayOf(UUID, ITEM, TITLE, SUBTITLE, ELEMENT_TYPE, ELEMENT_ID, FALSE_POSITIVE),
                 bodylines.mapNotNull {
@@ -69,7 +77,9 @@ class OsmoseDao(
                             Log.i(TAG, "skip line: element parse error for ${it[13]}, line: $it")
                             null
                         }
-                        else if (blockedItems.contains(it[2])) {
+                        else if ((!isPositiveList && blockedItemsOrAllowedItems.contains(it[2])) ||
+                            (isPositiveList && !blockedItemsOrAllowedItems.contains(it[2]))
+                        ) {
                             Log.i(TAG, "skip line: item type ${it[2]} blocked, line: $it")
                             null
                         }
@@ -82,6 +92,7 @@ class OsmoseDao(
             )
         } catch (e: Exception) {
             Log.e(TAG, "exception: ${e.message}", e)
+            throw e
         }
     }
 
